@@ -280,24 +280,47 @@
 
 #pragma mark - Rotation
 
+- (UIViewController *)checkNavigationController:(UIViewController *)contentViewController {
+    UIViewController * vc = contentViewController;
+    if ([vc isKindOfClass:[UINavigationController class]]){
+        NSArray *viewControllers = [(UINavigationController *)vc viewControllers];
+        if (viewControllers && viewControllers.count > 0){
+            vc = viewControllers.lastObject;
+        }
+    }
+    return vc;
+}
+
+- (UIViewController *)mainViewController {
+    UIViewController *vc = [self checkNavigationController:self.contentViewController];
+    UIViewController *presented = [vc presentedViewController];
+    if (presented){
+        vc = [self checkNavigationController:presented];
+    }
+    return vc;
+}
+
 - (BOOL)shouldAutorotate
 {
+    return NO;
 	return	[self.menuViewController shouldAutorotate] &&
-			[self.contentViewController shouldAutorotate] &&
+			[[self mainViewController] shouldAutorotate] &&
 			self.panGesture.state != UIGestureRecognizerStateChanged;
 }
 
 
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations
 {
-	return [self.menuViewController supportedInterfaceOrientations] & [self.contentViewController supportedInterfaceOrientations];
+    return UIInterfaceOrientationMaskPortrait;
+	return [self.menuViewController supportedInterfaceOrientations] & [[self mainViewController] supportedInterfaceOrientations];
 }
 
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
 {
-	return	[self.menuViewController shouldAutorotateToInterfaceOrientation:toInterfaceOrientation] &&
-			[self.contentViewController shouldAutorotateToInterfaceOrientation:toInterfaceOrientation];
+    BOOL shouldAutorotate = [self.menuViewController shouldAutorotateToInterfaceOrientation:toInterfaceOrientation] &&
+    [[self mainViewController] shouldAutorotateToInterfaceOrientation:toInterfaceOrientation];
+    return shouldAutorotate;
 }
 
 
@@ -309,7 +332,7 @@
 	{
 		CGRect frame = self.contentViewController.view.frame;
 		frame.origin.x = [self contentViewMinX];
-		self.contentViewController.view.frame = frame;
+		[self mainViewController].view.frame = frame;
 		
 		if (![self isContentViewHidden])
 		{
@@ -570,6 +593,7 @@
                 [self.contentViewController endAppearanceTransition];
             
             // Add the new content view
+            self.contentViewController = nil;
             self.contentViewController = contentViewController;
             self.contentViewController.view.frame = frame;
             [self.contentViewController.view addGestureRecognizer:self.tapGesture];
